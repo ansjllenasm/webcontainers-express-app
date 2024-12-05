@@ -12,6 +12,7 @@
     "vite": "^6.0.1"
   },
   "dependencies": {
-    "@webcontainer/api": "^1.5.1-internal.1"
+    "@webcontainer/api": "^1.5.1-internal.1",
+    "@xterm/xterm": "^5.5.0"
   }
 }
