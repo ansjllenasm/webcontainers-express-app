@@ -52,11 +52,27 @@ async function startDevServer() {
   });
 }
 
+/** @param {string} content*/
+
+async function writeIndexJS(content) {
+  await webcontainerInstance.fs.writeFile("/index.js", content);
+}
+
 /** @type {import('@webcontainer/api').WebContainer}  */
 let webcontainerInstance;
 
+// -------------------------------
+//
+//  Entry point
+//
+// -------------------------------
+
 window.addEventListener("load", async () => {
   textareaEl.value = files["index.js"].file.contents;
+  textareaEl.addEventListener("input", (e) => {
+    writeIndexJS(e.currentTarget.value);
+  });
+
   // Call only once
   webcontainerInstance = await WebContainer.boot();
   await webcontainerInstance.mount(files);
