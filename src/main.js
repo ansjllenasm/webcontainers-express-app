@@ -10,12 +10,8 @@ import { WebContainer } from "@webcontainer/api";
 
 document.querySelector("#app").innerHTML = `
   <div class="container">
-    <div class="editor">
-      <textarea>I am a textarea</textarea>
-    </div>
-    <div class="preview">
-      <iframe src="loading.html"></iframe>
-    </div>
+    <textarea>Loading...</textarea>
+    <iframe src="loading.html"></iframe>
   </div>
 `;
 
