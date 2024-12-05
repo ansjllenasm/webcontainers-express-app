@@ -33,56 +33,34 @@ const terminalEl = document.querySelector(".terminal");
 //
 // ----------------------------
 
-/**
- * @param {Terminal} terminal
- */
-async function installDependencies(terminal) {
-  // Install dependencies
-  const installProcess = await webcontainerInstance.spawn("npm", ["install"]);
-
-  installProcess.output.pipeTo(
-    new WritableStream({
-      write(data) {
-        terminal.write(data);
-      },
-    })
-  );
-  // Wait for install command to exit
-  return installProcess.exit;
-}
-
-/**
- * @param {Terminal} terminal
- */
-async function startDevServer(terminal) {
-  // Run `npm run start` to start the Express app
-  const serverProcess = await webcontainerInstance.spawn("npm", [
-    "run",
-    "start",
-  ]);
-
-  serverProcess.output.pipeTo(
-    new WritableStream({
-      write(data) {
-        terminal.write(data);
-      },
-    })
-  );
-
-  // Wait for `server-ready` event
-  webcontainerInstance.on("server-ready", (port, url) => {
-    iframeEl.src = url;
-  });
-}
+/** @type {import('@webcontainer/api').WebContainer}  */
+let webcontainerInstance;
 
 /** @param {string} content*/
-
 async function writeIndexJS(content) {
   await webcontainerInstance.fs.writeFile("/index.js", content);
 }
 
-/** @type {import('@webcontainer/api').WebContainer}  */
-let webcontainerInstance;
+/**
+ * @param {Terminal} terminal
+ */
+async function startShell(terminal) {
+  const shellProcess = await webcontainerInstance.spawn("jsh");
+  shellProcess.output.pipeTo(
+    new WritableStream({
+      write(data) {
+        terminal.write(data);
+      },
+    })
+  );
+
+  const input = shellProcess.input.getWriter();
+  terminal.onData((data) => {
+    input.write(data);
+  });
+
+  return shellProcess;
+}
 
 // -------------------------------
 //
@@ -90,10 +68,16 @@ let webcontainerInstance;
 //
 // -------------------------------
 
+let timeoutRef;
+
 window.addEventListener("load", async () => {
   textareaEl.value = files["index.js"].file.contents;
   textareaEl.addEventListener("input", (e) => {
-    writeIndexJS(e.currentTarget.value);
+    const val = e.currentTarget.value;
+    clearTimeout(timeoutRef);
+    timeoutRef = setTimeout(() => {
+      writeIndexJS(val);
+    }, 250);
   });
 
   const terminal = new Terminal({
@@ -105,10 +89,10 @@ window.addEventListener("load", async () => {
   webcontainerInstance = await WebContainer.boot();
   await webcontainerInstance.mount(files);
 
-  const exitCode = await installDependencies(terminal);
-  if (exitCode !== 0) {
-    throw new Error("Installation failed");
-  }
+  // Wait for `server-ready` event
+  webcontainerInstance.on("server-ready", (port, url) => {
+    iframeEl.src = url;
+  });
 
-  startDevServer(terminal);
+  startShell(terminal);
 });
