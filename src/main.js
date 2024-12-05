@@ -1,3 +1,4 @@
+import { FitAddon } from "@xterm/addon-fit";
 import "./style.css";
 import { files } from "./files";
 import { WebContainer } from "@webcontainer/api";
@@ -45,7 +46,12 @@ async function writeIndexJS(content) {
  * @param {Terminal} terminal
  */
 async function startShell(terminal) {
-  const shellProcess = await webcontainerInstance.spawn("jsh");
+  const shellProcess = await webcontainerInstance.spawn("jsh", {
+    terminal: {
+      cols: terminal.cols,
+      rows: terminal.rows,
+    },
+  });
   shellProcess.output.pipeTo(
     new WritableStream({
       write(data) {
@@ -80,10 +86,15 @@ window.addEventListener("load", async () => {
     }, 250);
   });
 
+  const fitAddon = new FitAddon();
+
   const terminal = new Terminal({
     convertEol: true,
   });
+  terminal.loadAddon(fitAddon);
   terminal.open(terminalEl);
+
+  fitAddon.fit();
 
   // Call only once
   webcontainerInstance = await WebContainer.boot();
@@ -94,5 +105,12 @@ window.addEventListener("load", async () => {
     iframeEl.src = url;
   });
 
-  startShell(terminal);
+  const shellProcess = await startShell(terminal);
+  window.addEventListener("resize", () => {
+    fitAddon.fit();
+    shellProcess.resize({
+      cols: terminal.cols,
+      rows: terminal.rows,
+    });
+  });
 });
